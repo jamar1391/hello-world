@@ -21,16 +21,24 @@ print(x1)
 x = np.linspace(0, max(x1), 20001)
 y = np.interp(x,x1,y1)
 
-plt.plot(x,y)
+slope = {'Silty Sand': 1, 'Stable Rock': 10, 'Medium Dense Sand': .66667, 'Firm Clay': 1.3333}
+b_press = {'Silty Sand': 2000, 'Stable Rock': 6000, 'Medium Dense Sand': 2500, 'Firm Clay': 1500}
+exc_cost = {'Silty Sand': 1, 'Stable Rock': 3, 'Medium Dense Sand': 1, 'Firm Clay': 1}
+fnd_depth = {'Silty Sand': 4, 'Stable Rock': 2, 'Medium Dense Sand': 3, 'Firm Clay': 3}
 
-# earth = []
+# plt.plot(x,y)
 
-# for i in x:
-#     if i < 20001 or (i > 120000 and i < 150000):
-#         earth.append((i,'Silty Sand'))
-#     elif i < 80000 or i > 180000:
-#         earth.append((i,'Stable Rock'))
-#     elif i <= 120000:
-#         earth.append((i,'Medium Dense Sand'))
-#     else:
-#         earth.append((i,'Firm Clay'))
+earth = []
+
+for i in x:
+    if i < 20001 or (i > 120000 and i < 150000):
+        earth.append((i,'Silty Sand'))
+    elif i < 80000 or i > 180000:
+        earth.append((i,'Stable Rock'))
+    elif i <= 120000:
+        earth.append((i,'Medium Dense Sand'))
+    else:
+        earth.append((i,'Firm Clay'))
+
+
+
