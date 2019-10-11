@@ -28,10 +28,30 @@ print(x1)
 x = np.linspace(0, max(x1), 20001)
 y = np.interp(x,x1,y1)
 
-slope = {'Silty Sand': 1, 'Stable Rock': 10, 'Medium Dense Sand': .66667, 'Firm Clay': 1.3333}
-b_press = {'Silty Sand': 2000, 'Stable Rock': 6000, 'Medium Dense Sand': 2500, 'Firm Clay': 1500}
-exc_cost = {'Silty Sand': 1, 'Stable Rock': 3, 'Medium Dense Sand': 1, 'Firm Clay': 1}
-fnd_depth = {'Silty Sand': 4, 'Stable Rock': 2, 'Medium Dense Sand': 3, 'Firm Clay': 3}
+slope = {'Silty Sand': 1, 
+		 'Stable Rock': 10, 
+		 'Medium Dense Sand': .66667, 
+		 'Firm Clay': 1.3333}
+
+b_press = {'Silty Sand': 2000, 
+		   'Stable Rock': 6000, 
+		   'Medium Dense Sand': 2500, 
+		   'Firm Clay': 1500}
+
+exc_cost = {'Silty Sand': 1, 
+			'Stable Rock': 3, 
+			'Medium Dense Sand': 1, 
+			'Firm Clay': 1}
+
+fnd_depth = {'Silty Sand': 4, 
+			 'Stable Rock': 2, 
+			 'Medium Dense Sand': 3, 
+			 'Firm Clay': 3}
+
+weight = {'Silty Sand': 99, 
+		  'Stable Rock': 167, 
+		  'Medium Dense Sand': 116, 
+		  'Firm Clay': 106}
 
 plt.plot(x,y)
 
