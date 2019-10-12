@@ -177,8 +177,8 @@ cost_dt    = 1000 #[$/day]
 juncs = [50000, 80000, 100000, 110000, 120000, 150000, 160000]
 
 # lowest starting location that touches each junction (determined visually):
-a = [4990, 7974, 9996, 10995, 11950, 14950, 15950]
-jxdex = [5000, 8000, 10000, 11000, 12000, 15000, 16000]
+a = [4990, 7974, 10000, 11000, 11950, 14950, 15950]
+jxdex = [5000, 8000, 10000, 11000, 12000, 15000, 16000] # index at which junction lives
 
 
 npsha = [2197, 1652, 1284, 839, 717, 644, 127] # npsha for pump at given junction
@@ -195,17 +195,73 @@ viable_pumps = []
 for junction in n_juncs:
 	for pump in pumps:
 		if pump['NPSHA'] < junction[2] and pump['hp'] > hp_req:
-			viable_pumps.append((junction[0],pump['Name']))
+			viable_pumps.append((junction[0],pump))
 
 exc_costs = []		
 for i in a:
 	excavation = exc[i-3000][0] * 500  #[ft3]
-	hoe_days = excavation/track_hoe
+
+	if (excavation % track_hoe) != 0:
+		hoe_days = (excavation//track_hoe) + 1
+	else:
+		hoe_days = excavation/track_hoe
+
 	hoe_cost = hoe_days * cost_th
-	truck_days = excavation/dump_truck
+
+	if (excavation % dump_truck) != 0:
+		truck_days = (excavation//dump_truck) + 1
+	else:
+		truck_days = excavation/dump_truck
+
 	truck_cost = truck_days * cost_dt
 	cost = hoe_cost + truck_cost
 	exc_costs.append((cost,i))
-	
+
+pedestal_dimensions = [] # list of dicts with jx, pump, Hp, Lp, Wp, H, Lf, Wf
+unit_weight_concrete = 145 # [lb/ft3]
+
 for jx,pump in viable_pumps:
 	i = jx - 4
+	type_soil = earth[jxdex[i]][1]
+	unit_weight_soil = weight[type_soil]
+	H = 1.5
+	found_depth = fnd_depth[type_soil]
+	pump_weight = pump['Weight']
+	Lp = pump['Length'] + 1
+	Wp = pump['Width'] + 1
+	Hp = found_depth - .5
+	Wf = Wp  # initializing value (guess) for footing width
+	Lf = Lp  # initializing value (guess) for footing length
+	vol_footing  = Wf * Lf * H
+	vol_pedestal = Wp * Lp * Hp
+	Ap = Wp * Lp # Area of pedestal also represents volume of exposed pedestal (height = 1)
+	weight_soil = (vol_footing + vol_pedestal - Ap) * unit_weight_soil
+	Af = Wf*Lf
+	weight_foundation = (pump_weight + (vol_footing * unit_weight_concrete) +
+						 (vol_pedestal * unit_weight_concrete) - weight_soil)
+
+	while (weight_foundation/Af) > b_press[type_soil]:
+		Wf += .01
+		Lf += .01
+
+	if (Wf - 1) < Wp:
+		Lp = Lf
+		Wp = Wf
+		H = 0
+		Hp += 1.5
+		vol = Wp * Lp * Hp
+
+		while (weight_foundation/Af) > b_press[type_soil]:
+			vol = Wp * Lp * Hp
+			weight_foundation = pump_weight + (vol * unit_weight_concrete)
+			Wp += .01
+			Lp += .01
+
+	pedestal_dimensions.append({'Junction': jx, 'Pump': pump['Name'], 'Vol_f': vol + (Wf*Lf*H), 'H_p': Hp,
+								'L_p': Lp, 'W_p': Wp, 'H_f': H, 'L_f': Lf, 'W_f': Wf})
+
+vol_exc = []
+
+
+
+accrued_list = [] # list of tuples: (jx, pump, v_f, v_e, v_moved, v_trucked, cost_cum)
