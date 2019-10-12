@@ -154,7 +154,7 @@ for i in exc:
 	x_new.append(i[1])
 	y_new.append(i[0])
 
-plt.plot(x_new,y_new)
+#plt.plot(x_new,y_new)
 
 # now I need to throw out all the values that occur between junctions,
 # since the only viable pump location (currently) is at a junction
@@ -168,7 +168,17 @@ plt.plot(x_new,y_new)
 # the first 4 indices can be thrown out; they are within 30000 [ft] of start
 # the last 2 indices can be thrown out; pressure drop is too much by then (negative NPSHA)
 
+track_hoe  = 2700 #[ft3/day]
+cost_th    = 5000 #[$/day]
+dump_truck = 810  #[ft3/day]
+cost_dt    = 1000 #[$/day]
+
+
 juncs = [50000, 80000, 100000, 110000, 120000, 150000, 160000]
+
+# lowest starting location that touches each junction (determined visually):
+a = [4990, 7974, 9996, 10995, 11950, 14950, 15950]
+
 
 npsha = [2197, 1652, 1284, 839, 717, 644, 127] # npsha for pump at given junction
 hp_req = 6545  # one pump system, hp requirement is constant
@@ -185,3 +195,13 @@ for junction in n_juncs:
 	for pump in pumps:
 		if pump['NPSHA'] < junction[2] and pump['hp'] > hp_req:
 			viable_pumps.append((junction[0],pump['Name']))
+
+exc_costs = []		
+for i in a:
+	excavation = exc[i-3000][0] * 500  #[ft3]
+	hoe_days = excavation/track_hoe
+	hoe_cost = hoe_days * cost_th
+	truck_days = excavation/dump_truck
+	truck_cost = truck_days * cost_dt
+	cost = hoe_cost + truck_cost
+	exc_costs.append((cost,i))
