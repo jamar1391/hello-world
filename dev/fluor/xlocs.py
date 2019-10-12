@@ -178,6 +178,7 @@ juncs = [50000, 80000, 100000, 110000, 120000, 150000, 160000]
 
 # lowest starting location that touches each junction (determined visually):
 a = [4990, 7974, 9996, 10995, 11950, 14950, 15950]
+jxdex = [5000, 8000, 10000, 11000, 12000, 15000, 16000]
 
 
 npsha = [2197, 1652, 1284, 839, 717, 644, 127] # npsha for pump at given junction
@@ -205,3 +206,6 @@ for i in a:
 	truck_cost = truck_days * cost_dt
 	cost = hoe_cost + truck_cost
 	exc_costs.append((cost,i))
+	
+for jx,pump in viable_pumps:
+	i = jx - 4
