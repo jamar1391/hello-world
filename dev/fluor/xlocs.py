@@ -121,12 +121,12 @@ for i,j in enumerate(x[3000:-1050]): # for each starting location between 30000 
 	counter = 0
 	if slope[earth[a][1]] == slope[earth[b][1]]:
 		A = (y[b]-y[a])*500/2
-		if earth[a][1] == 'Stable Rock':
-			A *= 3
+		# if earth[a][1] == 'Stable Rock':
+		# 	A *= 3
 		while y0 < y[b+counter]:
 			temp = (y[a+counter] - y0)*dx
-			if earth[a+counter][1] == 'Stable Rock':
-				temp *= 3
+			# if earth[a+counter][1] == 'Stable Rock':
+			# 	temp *= 3
 			B += temp
 			y0 += (slope[earth[a + counter][1]])*dx
 			counter += 1
@@ -135,13 +135,13 @@ for i,j in enumerate(x[3000:-1050]): # for each starting location between 30000 
 	else:
 		for section in range(a,b):
 			temp = ((1/2)*(y[section]+y[section+1])-y[a])*dx
-			if earth[section][1] == 'Stable Rock':
-				temp *= 3
+			# if earth[section][1] == 'Stable Rock':
+			# 	temp *= 3
 			A += temp
 		while y0 < y[a+counter]:
 			temp = (y[a+counter] - y0)*dx
-			if earth[a+counter][1] == 'Stable Rock':
-				temp *= 3
+			# if earth[a+counter][1] == 'Stable Rock':
+			# 	temp *= 3
 			B += temp
 			y0 += (slope[earth[a + counter][1]])*dx
 			counter += 1
@@ -206,7 +206,10 @@ for i in a:
 	else:
 		hoe_days = excavation/track_hoe
 
-	hoe_cost = hoe_days * cost_th
+	if earth[i][1] == 'Stable Rock':
+		hoe_cost = hoe_days * cost_th * 3
+	else:
+		hoe_cost = hoe_days * cost_th
 
 	if (excavation % dump_truck) != 0:
 		truck_days = (excavation//dump_truck) + 1
@@ -257,11 +260,47 @@ for jx,pump in viable_pumps:
 			Wp += .01
 			Lp += .01
 
-	pedestal_dimensions.append({'Junction': jx, 'Pump': pump['Name'], 'Vol_f': vol + (Wf*Lf*H), 'H_p': Hp,
+	pedestal_dimensions.append({'Junction': jx, 'Pump': pump['Name'], 'PumpCost': pump['Cost'],
+								'Vol_f': vol + (Wf*Lf*H), 'H_p': Hp,
 								'L_p': Lp, 'W_p': Wp, 'H_f': H, 'L_f': Lf, 'W_f': Wf})
 
-vol_exc = []
+accrued_list = [] # list of tuples: (jx, pump, vol_fnd, vol_exc, vol_moved, vol_trucked, cost_cum)
 
+concrete_truck = 243   # [ft3/truck]
+cost_ct        = 15000 # [$/day]
 
+for option in pedestal_dimensions:
+	junc = option['Junction']
+	i = junc - 4
+	soil = earth[jxdex[i]][1]
+	m = slope[soil]
+	h = fnd_depth[soil]
+	d = h/m
+	W_f = option['W_f']
+	L_f = option['L_f']
+	vol_exc = h * (W_f + 2 + d) * (L_f + 2)
+	vol_moved = 2 * vol_exc - option['Vol_f'] + (W_f * L_f)
+	vol_trucked = option['Vol_f'] - (W_f * L_f)
 
-accrued_list = [] # list of tuples: (jx, pump, v_f, v_e, v_moved, v_trucked, cost_cum)
+	if (vol_moved % track_hoe) != 0:
+		hoe_days = (vol_moved//track_hoe) + 1
+	else:
+		hoe_days = vol_moved/track_hoe
+
+	if soil == 'Stable Rock':
+		hoe_cost = hoe_days * cost_th * 3
+	else:
+		hoe_cost = hoe_days * cost_th
+
+	if (vol_trucked % dump_truck) != 0:
+		truck_days = (vol_trucked//dump_truck) + 1
+	else:
+		truck_days = vol_trucked/dump_truck
+
+	num_conc_trucks = (option['Vol_f']//243) + 1
+	cost_conc_trucks = num_conc_trucks * cost_ct
+
+	truck_cost = truck_days * cost_dt
+	cost = hoe_cost + truck_cost + exc_costs[option['Junction']-4][0] + cost_conc_trucks + option['PumpCost']
+
+	accrued_list.append((junc,option['Pump'],cost))
