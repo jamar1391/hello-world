@@ -90,7 +90,7 @@ fnd_depth = {'Silty Sand': 4,
 weight = {'Silty Sand': 99, 
 		  'Stable Rock': 167, 
 		  'Medium Dense Sand': 116, 
-		  'Firm Clay': 106} # unit weight of soil [lb]
+		  'Firm Clay': 106} # unit weight of soil [lb/ft3]
 
 # plt.plot(x,y)
 
