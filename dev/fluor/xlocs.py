@@ -197,7 +197,10 @@ for junction in n_juncs:
 		if pump['NPSHA'] < junction[2] and pump['hp'] > hp_req:
 			viable_pumps.append((junction[0],pump))
 
-exc_costs = []		
+exc_costs = []	
+hoe = []
+truck = []
+	
 for i in a:
 	excavation = exc[i-3000][0] * 500  #[ft3]
 
@@ -218,6 +221,8 @@ for i in a:
 
 	truck_cost = truck_days * cost_dt
 	cost = hoe_cost + truck_cost
+	truck.append((truck_days,i))
+	hoe.append((hoe_days,i))
 	exc_costs.append((cost,i))
 
 pedestal_dimensions = [] # list of dicts with jx, pump, Hp, Lp, Wp, H, Lf, Wf
