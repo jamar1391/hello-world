@@ -177,7 +177,7 @@ cost_dt    = 1000 #[$/day]
 juncs = [50000, 80000, 100000, 110000, 120000, 150000, 160000]
 
 # lowest starting location that touches each junction (determined visually):
-a = [4990, 7974, 10000, 11000, 11950, 14950, 15950]
+a = [4990, 7951, 10000, 11000, 11951, 14951, 15951]
 jxdex = [5000, 8000, 10000, 11000, 12000, 15000, 16000] # index at which junction lives
 
 
