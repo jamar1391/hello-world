@@ -64,6 +64,9 @@ locations = list(zip(x,y,D))  # y values are not unique but x and D are
 # These pressures are generated in AFT Fathom; the first list is the pressure
 # in each section if the pump were placed at junction 4, the second list is the 
 # max pressures if the pump is placed at junction 5, etc...
+
+# These pressures are [psia], but they are converted to psig prior to being
+# used in any calculations
 P_stat_max = [
     [114.5, 960.2, 960.2, 1960.4, 1724.6, 1565.7,
      1373.1, 1320.1, 1288.8, 1064.9, 968.6, 408.4],
@@ -198,9 +201,11 @@ juncs = [50000, 80000, 100000, 110000, 120000, 150000, 160000]
 x_locs      = x_locs[:-2951]
 exc_amounts = exc_amounts[:-2951]
 
+######################################################
 plt.plot(x_locs,exc_amounts) 
 for i in juncs:
-    plt.axvline(x=(i/dx), color='r',linestyle=':')
+	plt.axvline(x=(i/dx), color='r',linestyle=':')
+######################################################
 
 # In order to overlap a junction, the cut must start within 500 feet of it.
 # Ideally, for any given junction, we will select the starting location that
@@ -224,10 +229,12 @@ for i,jx in enumerate(junc_ind):
 # this step has to wait until after calculating the costs, because the 3x
 # multiplier DOES NOT apply to the dump trucks
 
-track_hoe  = 2700 #[ft3/day], converted from [yd3/day]
-cost_th    = 5000 #[$/day]
-dump_truck = 810  #[ft3/day]
-cost_dt    = 1000 #[$/day]
+track_hoe      = 2700  #[ft3/day], converted from [yd3/day]
+cost_th        = 5000  #[$/day]
+dump_truck     = 810   #[ft3/day]
+cost_dt        = 1000  #[$/day]
+concrete_truck = 243   #[ft3/day]
+cost_ct        = 15000 #[$/day]
 
 # lowest starting location that covers each junction (determined visually):
 a = [4990, 7951, 10000, 11000, 11951, 14951, 15951] # in index format (reduced by factor of dx)
@@ -320,9 +327,38 @@ for jx,pump in viable_pumps:
                                 'Vol_f': vol + (Wf*Lf*H), 'H_p': Hp, 'soil': type_soil,
                                 'L_p': Lp, 'W_p': Wp, 'H_f': H, 'L_f': Lf, 'W_f': Wf,
                                 'Pressures':P_stat_max[i],
-                                'TotalCost': pump['Cost'] + exc_costs_shifted[jx][0]})
+                                'Excavation': exc_costs_shifted[jx][0]})
 
     # the above variable, foundation_details, yields a list of 19 dictionaries
+
+# The pit that will fit the foundation is excavated, and its cost calculated:
+for i in solution_details:
+    width  = i['W_f'] + 2
+    length = i['L_f'] + 2
+    depth  = fnd_depth[i['soil']]
+    m      = slope[i['soil']]
+    area   = (width * depth) + (depth * (depth/m))
+    volume = area * length 
+
+    vol_hoed = (2 * volume) - i['Vol_f']
+    vol_trucked = i['Vol_f']
+
+    hoe_days = (vol_hoed//track_hoe) + 1
+    hoe_cost = hoe_days * cost_th * cost_multiplier[i['soil']]
+    i['Hoe-Days'] = hoe_days
+    i['Hoe Cost'] = hoe_cost
+
+    truck_days = (vol_trucked//dump_truck) + 1
+    truck_cost = truck_days * cost_dt
+    i['Truck-Days'] = truck_days
+    i['Truck Cost'] = truck_cost
+
+# Cost of the concrete is added to 'solution_details'
+for i in solution_details:
+    foundation_vol = i['Vol_f']
+    conc_truck_days = (foundation_vol//concrete_truck) + 1
+    conc_truck_cost = conc_truck_days * cost_ct
+    i['Concrete Cost'] = conc_truck_cost
 
 # Finally, we use the 19 dictionaries to test possible pipe configs:
 
@@ -339,74 +375,79 @@ schedules = [{'Name': 'Schedule 5', 'ID': 29.5, 't': .5 / 2,
 
 # Create every possible combination of three pipe schedules from the five available;
 # this is known as 'n choose k' combinatorics
-# combined = list(combinations(schedules, 3))
+combined = list(combinations(schedules, 3))
 
-t_vals = [.5 / 2, .624 / 2, .75 / 2, 1 / 2, 1.25 / 2]
+def thickness_check(t, p):
+    if t > (p/2496):
+        return True
+    else:
+        return False
 
-combined = list(combinations(t_vals, 3))
+# Compare the pressures developed based on pump placement with 
+# the thicknesses in the 'combined' list:
+def pump_placement_check(junction,combo,lst):
+    answer = []
+    i = junction-4
+    pressures = lst[i]
+    for j,pressure in enumerate(pressures):
+        for r in range(3):
+            if thickness_check(combo[r]['t'], pressure):
+                answer.append((j+1,combo[r]))
+                break
+    return answer
 
-final_list = []
+long_list = []
+for i in range(4,11):
+    for j in range(len(combined)):
+        a = pump_placement_check(i,combined[j],P_stat_max)
+        long_list.append((i, a))
 
-for h, i in enumerate(P_stat_max):
-    final_list.append([])
-    for j in i:
-        for k in combined:
-            for m in range(3):
-                if k[m] >= (((j - 14.7) * 30) / (2 * .72 * 52000)):
-                    final_list[h].append(k)
-                    break
+# if one of the lists in 'long_list' has less than 12 entries, it
+# is a failed combination of pipe schedules and should be discarded
+short_list = []
+for i in long_list:
+    if len(i[1]) == 12:
+        short_list.append(i)
 
-seen = [{}, {}, {}, {}, {}, {}, {}]
-dupes = []
+running_total = []
 
-for i in range(len(final_list)):
-    for x in final_list[i]:
-        if x not in seen[i]:
-            seen[i][x] = 1
-        else:
-            if seen[i][x] == 1:
-                dupes.append(x)
-            seen[i][x] += 1
+for k,i in enumerate(short_list):
+    vol = 0
+    running_total.append([])
+    running_total[k].append(i[0])
+    for j in i[1]:
+        sec = sections[j[0]-1]
+        area = j[1]['Area']/144
+        vol += sec * area
+        running_total[k].append((j[0],j[1]['Name']))
+    weight = vol * 490/2000  # 490 lb/ft3, 2000 lb/ton
+    cost = vol * 490 * 3     # 2000 $/ton, x3 for manufacture
+    running_total[k].append(cost)
 
-working_list = []
+pipes = []
 
-for i, j in enumerate(seen):
-    for x in j:
-        if j[x] == 12:
-            working_list.append((x, i + 4))
+for i in running_total:
+    pipes.append((i[13],i[0],i[1:13]))
 
-pipe_vols = []
+pipes = sorted(pipes)
+    
+# from here, we print the list pipes, and can verify that the first
+# 9 entries are all at junction 10, with the cheapest beating the next
+# junction (9) by $14.6 M
 
-for group in working_list:
-    for i in range(len(P_stat_max)):
-        vol = 0
-        for section, pressure in zip(sections, P_stat_max[i]):
-            for thickness in group[0]:
-                if (pressure - 14.7) < 2496 * thickness:
-                    Area_in2 = ((15 ** 2) - ((15 - thickness) ** 2)) * np.pi
-                    Area_ft2 = Area_in2 / 144
-                    vol_ft3 = Area_ft2 * section
-                    break
-                # else:
+# for i in pipes:
+#     print(i)
+#     print()
+final = []
 
-            vol += vol_ft3
-        pipe_vols.append((vol, group))
+for i in solution_details:
+    final_cost = i['PumpCost'] + i['Excavation'] + i['Hoe Cost'] + i['Truck Cost'] + i['Concrete Cost']
+    final.append((i['Junction'],final_cost))
 
-pipe_vols = sorted(pipe_vols)
+finall = [
+(4, 7073000), (5, 7272000), (6, 7480000), (7, 4967000), 
+(8, 4002000), (9, 4028000), (10, 6579000)
+]
 
-pipe_costs = []
-pipe_weights = []
 
-for i in pipe_vols:
-    cost = (i[0] * 490 * 3)
-    weight = (i[0] * 490 / 2000)  # [tons]
-    pipe_costs.append((cost, i[1]))
-    pipe_weights.append((weight, i[1]))
 
-# for i in solution_details:
-#     for p in i['Pressures']:
-#         for j,k in enumerate(p):
-#             for m in combined:
-#                 for n in range(3):
-#                     if m[n]['t'] < (.0004006 * k):
-#                         pass
