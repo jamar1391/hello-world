@@ -309,6 +309,7 @@ for jx,pump in viable_pumps:
     while (weight_foundation/Af) > b_press[type_soil]:
         Wf += .01
         Lf += .01
+        Af = Wf*Lf
 
     if (Wf - 1) < Wp:
         Lp = Lf
