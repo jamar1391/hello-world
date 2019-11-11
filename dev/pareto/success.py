@@ -6,6 +6,9 @@ class People:
 		self.talent  = talent
 		self.money   = money
 		self.success = success
+        self.talent  = talent
+        self.money   = money
+        self.success = success
 	
 	def money_check(self):
 		self.money -= 50
